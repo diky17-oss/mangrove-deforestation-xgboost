@@ -1,72 +1,120 @@
-Mangrove Deforestation Mapping Using Integrated SAR and Optical Imagery with XGBoost
+# Mangrove Deforestation Mapping Using Integrated SAR and Optical Imagery with XGBoost
+
 This repository contains the source code, notebooks, and workflow developed for an undergraduate thesis entitled:
 
-“Mangrove Deforestation Mapping Using Integrated SAR and Optical Imagery with the XGBoost Algorithm (Case Study: Cilacap Regency, Indonesia)”
+**“Mangrove Deforestation Mapping Using Integrated SAR and Optical Imagery with the XGBoost Algorithm (Case Study: Cilacap Regency, Indonesia)”**
 
 The research aims to map mangrove land cover and analyze mangrove deforestation in a spatial–temporal manner by integrating optical and radar satellite imagery using a machine learning approach.
 
-🛰️ Data Used
+---
 
-Sentinel-1 (SAR)
+## 🛰️ Data Used
 
-Acquisition mode: IW
+1. **Sentinel-1 (SAR)**
 
-Polarization: VV & VH
+   * Acquisition mode: IW
+   * Polarization: VV & VH
+   * Spatial resolution: 10 m
 
-Spatial resolution: 10 m
+2. **Sentinel-2 (Optical)**
 
-Sentinel-2 (Optical)
+   * Level-2A (Surface Reflectance)
+   * Bands with 10 m and 20 m spatial resolution
 
-Level-2A (Surface Reflectance)
+3. **Training and Validation Samples**
 
-Bands with 10 m and 20 m spatial resolution
+   * Format: CSV / Shapefile (polygon)
+   * Used for training and validating the classification model
 
-Training and Validation Samples
+---
 
-Format: CSV / Shapefile 
-
-Used for training and validating the classification model
-
-🧪 Research Methodology
+## 🧪 Research Methodology
 
 The overall research workflow consists of the following steps:
 
-Image Preprocessing
+1. **Image Preprocessing**
 
-Radiometric and geometric preprocessing
+   * Radiometric and geometric preprocessing
+   * Cloud masking for Sentinel-2 imagery
+   * Speckle filtering and terrain correction for Sentinel-1 imagery
 
-Cloud masking for Sentinel-2 imagery
+2. **Feature Extraction**
 
-Speckle filtering and terrain correction for Sentinel-1 imagery
+   * Optical features: spectral bands and vegetation indices
+   * SAR features: backscatter coefficients and polarization ratios
 
-Feature Extraction
+3. **Feature Selection**
 
-Optical features: spectral bands and vegetation indices
+   * Recursive Feature Selection (RFS)
+   * Extremely Randomized Trees (ERT)
+   * Feature importance analysis
 
-SAR features: backscatter coefficients and polarization ratios
+4. **Land Cover Classification**
 
-Feature Selection
+   * Classification using the XGBoost algorithm
+   * Comparison between SAR-only, Optical-only, and combined datasets
 
-Recursive Feature Selection (RFS)
+5. **Accuracy Assessment**
 
-Extremely Randomized Trees (ERT)
+   * Confusion matrix
+   * Overall accuracy, producer’s accuracy, user’s accuracy, and Kappa coefficient
 
-Feature importance analysis
+6. **Mangrove Deforestation Analysis**
 
-Land Cover Classification
+   * Post-classification comparison
+   * Spatial–temporal analysis of mangrove loss (2020–2024)
 
-Classification using the XGBoost algorithm
+---
 
-Comparison between SAR-only, Optical-only, and combined datasets
+## 🌱 Land Cover Classes
 
-Accuracy Assessment
+The classification scheme consists of eight land cover classes:
 
-Confusion matrix
+1. Water Body
+2. Built-up Area
+3. Bare Land
+4. Mangrove
+5. Paddy Field
+6. Aquaculture Pond
+7. Terrestrial Vegetation
+8. Coastal Area
 
-Overall accuracy, producer’s accuracy, user’s accuracy, and Kappa coefficient
+---
 
-Mangrove Deforestation Analysis
+## 🛠️ Tools and Libraries
 
-Post-classification comparison
+* Python
+* XGBoost
+* Scikit-learn
+* Rasterio
+* GDAL
+* NumPy & Pandas
+* Matplotlib / Seaborn
 
-Spatial–temporal analysis of mangrove loss (2020–2024)
+---
+
+## 📁 Repository Structure
+
+```
+.
+├── data/                # Sample data and data description
+├── notebooks/           # Jupyter notebooks for each processing step
+├── src/                 # Python scripts
+├── results/             # Output maps, figures, and tables
+├── docs/                # Additional documentation
+├── requirements.txt     # Python dependencies
+└── README.md            # Project description
+```
+
+---
+
+## 📌 Notes
+
+* This repository is intended for academic and research purposes.
+* The code can be adapted for similar mangrove or coastal land cover mapping studies in other regions.
+
+---
+
+## 👤 Author
+
+**Moh. As'adul Kholqi*
