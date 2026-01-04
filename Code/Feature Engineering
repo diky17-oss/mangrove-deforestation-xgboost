@@ -50,7 +50,7 @@ with rasterio.open(raster_path) as src:
     img = src.read()
     profile = src.profile
     transform = src.transform
-    print(f"Jumlah band input: {img.shape[0]}")
+    print(f"Number of input bands: {img.shape[0]}")
 
 # Ekstrack band
 B1, B2, B3, B4, B5, B6, B7, B8, B8A, B9, B11, B12, VH, VV, elevation, slope, aspect = img[:17]
@@ -82,4 +82,74 @@ additional_bands = np.stack([
 
 # merger
 merged = np.concatenate((img, additional_bands), axis=0)
-print(f"Jumlah band akhir: {merged.shape[0]}")
+print(f"Number of final bands: {merged.shape[0]}")
+
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+
+def feature_engineering_raster(merged):
+    """
+    Adding PCA and TCT features to raster images (merged) directly.
+    
+    Args:
+        merged: np.array dengan shape (bands, rows, cols)
+
+    Returns:
+        merged_plus: np.array dengan fitur tambahan (bands + PCA + TCT)
+    """
+    # Assume that the Sentinel-2 band sequence: B1–B12 is in positions 0–11.
+    bands_optical = merged[0:11]  # (12, rows, cols)
+    rows, cols = bands_optical.shape[1], bands_optical.shape[2]
+
+    # ---------- PCA ----------
+ 
+    reshaped_optical = bands_optical.transpose(1, 2, 0).reshape(-1, 11)  # (rows*cols, 12)
+
+    scaler = StandardScaler()
+    optical_std = scaler.fit_transform(reshaped_optical)
+
+    # handle NaN: filter pixel valid
+    mask_valid = ~np.any(np.isnan(optical_std) | np.isinf(optical_std), axis=1)
+    optical_std_valid = optical_std[mask_valid]
+
+    # PCA only on valid pixels
+    pca = PCA(n_components=3)
+    pca_result_valid = pca.fit_transform(optical_std_valid)
+
+    # Fill all pixels
+    pca_result_full = np.full((reshaped_optical.shape[0], 3), np.nan, dtype=np.float32)
+    pca_result_full[mask_valid] = pca_result_valid
+    print(f"Variance explained by PCA: {pca.explained_variance_ratio_}")
+    
+    # Return to raster shape
+    
+    PCA1 = pca_result_full[:, 0].reshape((rows, cols))
+    PCA2 = pca_result_full[:, 1].reshape((rows, cols))
+    PCA3 = pca_result_full[:, 2].reshape((rows, cols))
+
+    pca_bands = np.stack([PCA1, PCA2, PCA3], axis=0)
+
+    # ---------- TCT ----------
+    # Ambil band B2, B3, B4, B8 dari indeks (1, 2, 3, 7)
+    B2 = merged[1]
+    B3 = merged[2]
+    B4 = merged[3]
+    B8 = merged[7]
+    B11 = merged[10]
+    B12 = merged[11]
+
+    TC_Brightness = 0.3510*B2 + 0.3813*B3 + 0.3437*B4 + 0.7196*B8 + 0.2396*B11 + 0.1949*B12
+    TC_Greenness  = -0.3599*B2 - 0.3533*B3 - 0.4734*B4 + 0.6633*B8 + 0.0087*B11 - 0.2856*B12
+    TC_Wetness    = 0.2578*B2 + 0.2305*B3 + 0.0883*B4 + 0.1071*B8 - 0.7611*B11 - 0.5308*B12
+
+    tct_stack = np.stack([TC_Brightness, TC_Greenness, TC_Wetness], axis=0)
+    tct_feature_names = ['TCT_Brightness', 'TCT_Greenness', 'TCT_Wetness']
+
+    # ---------- Merger ----------
+    merged_plus = np.concatenate((merged, pca_bands, tct_stack), axis=0)  # (bands+6, rows, cols)
+
+    print(f"Number of bands after adding PCA and TCT: {merged_plus.shape[0]}")
+    return merged_plus
+merged = np.concatenate((img, additional_bands), axis=0)
+merged = feature_engineering_raster(merged)
