@@ -1,0 +1,22 @@
+!pip install rasterio scikit-learn xgboost pandas numpy matplotlib seaborn tqdm
+
+#Import Library
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
+from sklearn.feature_selection import RFE
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set_style('whitegrid')
+
+# Import Classification Algorithms
+from shapely.geometry import Point
+from rasterio.transform import rowcol
+from sklearn.tree import DecisionTreeClassifier
+import xgboost as xgb
+import geopandas as gpd
+import rasterio
