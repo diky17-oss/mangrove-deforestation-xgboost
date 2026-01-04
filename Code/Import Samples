@@ -1,1 +1,37 @@
+# Import Data Sampel
+data_path = '/kaggle/input/finallll/Finallll.csv'  # Replace with the appropriate path
+df = pd.read_csv(data_path, sep=';')
 
+# Check data structure
+print(df.head())
+print("\nInformasi dataset:")
+print(df.info())
+print("\nDistribusi kelas:")
+print(df['label'].value_counts())
+
+# Converting numeric labels to class names for interpretation
+label_map = {
+0: ‘Water_Body’,
+    1: ‘Built_Up_Land’,
+    2: ‘Open_Land’,
+    3: ‘Mangrove’,
+    4: ‘Rice_Field’,
+    5: ‘Fish_Pond’,
+    6: ‘Vegetation’,
+    7: 'Coastal_Area'
+}
+
+df['class_name'] = df['label'].map(label_map)
+# Classes sorted by label number
+class_order = [label_map[i] for i in sorted(label_map.keys())]
+
+# Class distribution visualization
+plt.figure(figsize=(10, 6))
+sns.countplot(data=df, x='class_name', palette='viridis', order=class_order)
+
+plt.title('Distribusi Kelas Data Sampel', fontsize=16)
+plt.xlabel('Kelas', fontsize=12)
+plt.ylabel('Jumlah Sampel', fontsize=12)
+plt.xticks(rotation=30)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.show()
