@@ -1,0 +1,85 @@
+import rasterio
+import numpy as np
+
+# Vegetation indices
+def calc_index(numerator, denominator):
+    return np.where((denominator == 0), 0, numerator / denominator)
+
+def calc_ndvi(nir, red): return calc_index(nir - red, nir + red)
+def calc_savi(nir, red, L=0.5): return ((nir - red) / (nir + red + L)) * (1 + L)
+def calc_osavi(nir, red): return ((nir - red) / (nir + red + 0.16)) * (1 + 0.16)
+def calc_ipvi(nir, red): return nir / (nir + red)
+def calc_dvi(nir, red): return nir - red
+def calc_gndvi(nir, green): return calc_index(nir - green, nir + green)
+def calc_ndwi(green, nir): return calc_index(green - nir, green + nir)
+def calc_mndwi(green, swir): return calc_index(green - swir, green + swir)
+def calc_lswi(nir, swir): return calc_index(nir - swir, nir + swir)
+
+# SAR
+def ratio(a, b):
+    return np.where(b == 0, 0, a / b)
+
+def entropy(vv, vh):
+    total = vv + vh + 1e-8
+    p_vv = vv / total
+    p_vh = vh / total
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        log_p_vv = np.log2(p_vv)
+        log_p_vh = np.log2(p_vh)
+
+        log_p_vv = np.where(p_vv > 0, log_p_vv, 0)
+        log_p_vh = np.where(p_vh > 0, log_p_vh, 0)
+
+    H = -(p_vv * log_p_vv + p_vh * log_p_vh)
+    return np.nan_to_num(H, nan=0.0, neginf=0.0, posinf=0.0)
+
+def alpha(vv, vh):
+    return np.arctan2(vh, vv)  # radian
+
+def anisotropy(vv, vh):
+    numerator = np.abs(vv - vh)
+    denominator = vv + vh + 1e-8
+    return numerator / denominator
+
+# Path raster
+raster_path = '/kaggle/input/citra20-24dem/Citra2024DEM.tif'
+
+# Load raster
+with rasterio.open(raster_path) as src:
+    img = src.read()
+    profile = src.profile
+    transform = src.transform
+    print(f"Jumlah band input: {img.shape[0]}")
+
+# Ekstrack band
+B1, B2, B3, B4, B5, B6, B7, B8, B8A, B9, B11, B12, VH, VV, elevation, slope, aspect = img[:17]
+
+# Hitung indeks vegetasi
+NDVI = calc_ndvi(B8, B4)
+SAVI = calc_savi(B8, B4)
+OSAVI = calc_osavi(B8, B4)
+IPVI = calc_ipvi(B8, B4)
+DVI = calc_dvi(B8, B4)
+GNDVI = calc_gndvi(B8, B3)
+NDWI = calc_ndwi(B3, B8)
+MNDWI = calc_mndwi(B3, B11)
+LSWI = calc_lswi(B8, B11)
+
+# Calculate ratio VH/VV 
+VH_VV = ratio(VV, VH)
+VV_VH = ratio(VH, VV)
+Entropy = entropy(VV, VH)
+Alpha = alpha(VV, VH)
+Anisotropy = anisotropy(VV, VH)
+
+# merge all indices
+additional_bands = np.stack([
+    NDVI, SAVI, OSAVI, IPVI,
+    DVI, GNDVI, NDWI, MNDWI, LSWI,
+    VH_VV, VV_VH, Entropy, Alpha, Anisotropy
+])
+
+# merger
+merged = np.concatenate((img, additional_bands), axis=0)
+print(f"Jumlah band akhir: {merged.shape[0]}")
