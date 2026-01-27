@@ -1,0 +1,124 @@
+from xgboost import XGBClassifier
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
+from scipy.stats import uniform, randint
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+# Pastikan target_names sudah tersedia
+# Contoh:
+# target_names = ['Badan_Air', 'Lahan_Terbangun', ..., 'Tidal_Flat']
+
+# =========================
+# Hyperparameter Tuning
+# =========================
+
+# Tentukan jumlah kelas dari y_train
+n_classes = len(np.unique(y_train))
+
+# Base model
+xgb_clf = XGBClassifier(
+    use_label_encoder=False,
+    objective='multi:softprob',
+    eval_metric=['mlogloss', 'merror'],
+    num_class=n_classes,
+    random_state=42
+)
+
+# Hyperparameter search space
+param_dist = {
+    'n_estimators': randint(100, 500),
+    'learning_rate': uniform(0.01, 0.3),
+    'max_depth': randint(3, 10),
+    'subsample': uniform(0.6, 0.4),
+    'colsample_bytree': uniform(0.6, 0.4),
+    'gamma': uniform(0, 0.3),
+    'reg_lambda': uniform(1, 2),
+    'reg_alpha': uniform(0, 0.5),
+    'min_child_weight': randint(1, 7),
+    'max_delta_step': randint(0, 3)
+}
+
+# RandomizedSearchCV
+random_search = RandomizedSearchCV(
+    estimator=xgb_clf,
+    param_distributions=param_dist,
+    n_iter=30,
+    scoring='f1_weighted',
+    cv=5,
+    verbose=1,
+    random_state=42,
+    n_jobs=-1
+)
+
+# Train with eval_set for plotting learning curve
+random_search.fit(
+    X_train, y_train,
+    eval_set=[(X_train, y_train), (X_test, y_test)],
+    verbose=0
+)
+
+# =========================
+# Evaluasi Model
+# =========================
+
+# Best model dari hypertuning
+best_model = random_search.best_estimator_
+print("\n🔍 Best Parameters:", random_search.best_params_)
+
+# Prediksi
+y_pred = best_model.predict(X_test)
+
+# Evaluasi
+print('\n📊 Evaluation Metrics:')
+print('Accuracy score :', accuracy_score(y_test, y_pred))
+print('Precision score:', precision_score(y_test, y_pred, average='weighted'))
+print('Recall score   :', recall_score(y_test, y_pred, average='weighted'))
+print('F1 score       :', f1_score(y_test, y_pred, average='weighted'))
+
+print("\n📋 Classification Report:\n", classification_report(y_test, y_pred, target_names=target_names))
+
+# Confusion Matrix
+print("\n🔢 Matriks Konfusi:")
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yticklabels=target_names)
+plt.title('Matriks Konfusi')
+plt.ylabel('Kelas Aktual')
+plt.xlabel('Kelas Prediksi')
+plt.tight_layout()
+plt.show()
+
+# =========================
+# Visualisasi Learning Curve
+# =========================
+
+results = best_model.evals_result()
+epochs = len(results['validation_0']['mlogloss'])
+x_axis = range(epochs)
+
+plt.figure(figsize=(12, 5))
+
+# Plot Log Loss
+plt.subplot(1, 2, 1)
+plt.plot(x_axis, results['validation_0']['mlogloss'], label='Train')
+plt.plot(x_axis, results['validation_1']['mlogloss'], label='Test')
+plt.title('XGBoost Log Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Log Loss')
+plt.legend()
+plt.grid(True)
+
+# Plot Classification Error
+plt.subplot(1, 2, 2)
+plt.plot(x_axis, results['validation_0']['merror'], label='Train')
+plt.plot(x_axis, results['validation_1']['merror'], label='Test')
+plt.title('XGBoost Classification Error')
+plt.xlabel('Epoch')
+plt.ylabel('Error')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
