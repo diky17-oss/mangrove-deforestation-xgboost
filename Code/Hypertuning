@@ -1,0 +1,81 @@
+from xgboost import XGBClassifier
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
+from scipy.stats import uniform, randint
+
+# Class Names
+target_names = ['Water_Body', 'Built_Up_Land', 'Open_Land', 'Mangrove', 'Rice_Field', 'Fish_Pond', 'Vegetation', 'Coastal']
+
+# =========================
+# Hyperparameter Tuning
+# =========================
+
+n_classes = len(np.unique(y_train))
+
+# Base model
+xgb_clf = XGBClassifier(
+    use_label_encoder=False,
+    objective='multi:softprob',
+    eval_metric=['mlogloss', 'merror'],
+    num_class=n_classes,
+    random_state=42
+)
+
+# Search space
+param_dist = {
+    'n_estimators': randint(100, 500),
+    'learning_rate': uniform(0.01, 0.3),
+    'max_depth': randint(3, 10),
+    'subsample': uniform(0.6, 0.4),
+    'colsample_bytree': uniform(0.6, 0.4),
+    'gamma': uniform(0, 0.3),
+    'reg_lambda': uniform(1, 2),
+    'reg_alpha': uniform(0, 0.5),
+    'min_child_weight': randint(1, 7),
+    'max_delta_step': randint(0, 3)
+}
+
+# Randomized Search
+random_search = RandomizedSearchCV(
+    estimator=xgb_clf,
+    param_distributions=param_dist,
+    n_iter=30,
+    scoring='f1_weighted',
+    cv=5,
+    verbose=1,
+    random_state=42,
+    n_jobs=-1
+)
+
+random_search.fit(
+    X_train, y_train,
+    eval_set=[(X_train, y_train), (X_test, y_test)],
+    verbose=0
+)
+
+# =========================
+# Model Evaluation
+# =========================
+
+best_model = random_search.best_estimator_
+print("\n🔍 Best Parameters:", random_search.best_params_)
+
+y_pred = best_model.predict(X_test)
+
+print('\n📊 Evaluation Metrics:')
+print('Accuracy score :', accuracy_score(y_test, y_pred))
+print('Precision score:', precision_score(y_test, y_pred, average='weighted'))
+print('Recall score   :', recall_score(y_test, y_pred, average='weighted'))
+print('F1 score       :', f1_score(y_test, y_pred, average='weighted'))
+
+print("\n📋 Classification Report:\n", classification_report(y_test, y_pred, target_names=target_names))
+
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yticklabels=target_names)
+plt.title('Confusion Matrix')
+plt.ylabel('Actual Class')
+plt.xlabel('Predicted Class')
+plt.tight_layout()
+plt.show()
